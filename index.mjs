@@ -23,7 +23,7 @@ if (extendWidth || extendHeight) {
 }
 
 const maxZoom = Math.min(process.env.MAX_ZOOM, (Math.max(metadata.width + extendWidth, metadata.height + extendHeight) / 256) - 1);
-const startZoom = process.env.START_ZOOM || 0;
+const minZoom = process.env.MIN_ZOOM || 0;
 
 await fs.mkdir('output').catch(error => {
     if (!error.code === 'EEXIST') {
@@ -39,14 +39,14 @@ await fs.mkdir(`output/${mapName}`).catch(error => {
 });
 
 let totalTiles = 0;
-for (let z = startZoom + 1; z <= maxZoom + 1; z++) {
+for (let z = minZoom + 1; z <= maxZoom + 1; z++) {
     totalTiles += z * z;
 }
 
 const tiles = [];
 let completedTiles = 0;
 const zoomSpinner = ora({text: `${mapName}`, prefixText: '0.00%'});
-for (let z = startZoom; z <= maxZoom; z++) {
+for (let z = minZoom; z <= maxZoom; z++) {
     zoomSpinner.start(`${mapName} | z ${z}/${maxZoom}`);
     const scaledMap = sharp(await inputImage.clone().resize({
         width: (z + 1) * 256,

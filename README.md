@@ -13,4 +13,4 @@ MAP_NAME: The folder name in which to store generated tiles.
 
 MAX_ZOOM: The maximum zoom level for which to generate tiles (zero-indexed).
 
-START_ZOOM: The zoom level at which to start generating tiles (zero-indexed).
+MIN_ZOOM: The minimum zoom level for which to generate tiles (zero-indexed).
