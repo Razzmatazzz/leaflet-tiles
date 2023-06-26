@@ -1,9 +1,6 @@
 {
     "env": {
-        "commonjs": false,
-        "es6": true,
-        "jest": true,
-        "node": true
+        "es2022": true
     },
     "extends": "eslint:recommended",
     "globals": {
