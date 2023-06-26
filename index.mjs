@@ -10,8 +10,9 @@ dotenv.config();
 const imagePath = process.env.IMAGE_PATH || process.argv[2];
 let inputImage = sharp(imagePath);
 
-// eslint-disable-next-line
+/* eslint-disable */
 let metadata = await inputImage.metadata();
+/* eslint-enable */
 
 const extendWidth = metadata.width % 256;
 const extendHeight = metadata.height % 256;
