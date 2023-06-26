@@ -10,7 +10,7 @@ dotenv.config();
 const imagePath = process.env.IMAGE_PATH || process.argv[2];
 let inputImage = sharp(imagePath);
 
-let metadata = inputImage.metadata();
+let metadata = await inputImage.metadata();
 
 const extendWidth = metadata.width % 256;
 const extendHeight = metadata.height % 256;
