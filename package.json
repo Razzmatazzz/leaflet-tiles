@@ -1,0 +1,30 @@
+{
+  "name": "leaflet-tiles",
+  "version": "1.0.0",
+  "description": "Generate leaflet tiles from an input image",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Razzmatazzz/leaflet-tiles.git"
+  },
+  "keywords": [
+    "leaflet",
+    "map",
+    "tiles"
+  ],
+  "author": "Razzmatazz",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Razzmatazzz/leaflet-tiles/issues"
+  },
+  "homepage": "https://github.com/Razzmatazzz/leaflet-tiles#readme",
+  "dependencies": {
+    "dotenv": "16.3.1",
+    "sharp": "0.32.1",
+    "ora": "^6.3.1"
+  }
+}
