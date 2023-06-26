@@ -5,7 +5,10 @@
   "main": "index.mjs",
   "scripts": {
     "start": "node index.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --write 'index.mjs'",
+    "format-check": "prettier --check 'index.mjs'",
+    "lint": "eslint index.mjs"
   },
   "repository": {
     "type": "git",
@@ -26,5 +29,9 @@
     "dotenv": "16.3.1",
     "sharp": "0.32.1",
     "ora": "^6.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "prettier": "2.5.1"
   }
 }
