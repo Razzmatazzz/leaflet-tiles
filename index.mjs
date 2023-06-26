@@ -10,7 +10,7 @@ dotenv.config()
 const imagePath = process.env.IMAGE_PATH || process.argv[2]
 let inputImage = sharp(imagePath)
 
-let metadata = await inputImage.metadata()
+let metadata = inputImage.metadata()
 
 const extendWidth = metadata.width % 256
 const extendHeight = metadata.height % 256
@@ -29,7 +29,7 @@ const maxZoom = Math.min(
 )
 const minZoom = process.env.MIN_ZOOM || 0
 
-await fs.mkdir('output').catch(error => {
+fs.mkdir('output').catch(error => {
   if (!error.code === 'EEXIST') {
     console.log(error)
   }
@@ -41,7 +41,7 @@ const mapName =
     imagePath.lastIndexOf(path.sep) + 1,
     imagePath.lastIndexOf('.')
   )
-await fs.mkdir(`output/${mapName}`).catch(error => {
+fs.mkdir(`output/${mapName}`).catch(error => {
   if (!error.code === 'EEXIST') {
     console.log(error)
   }
@@ -58,7 +58,7 @@ const zoomSpinner = ora({text: `${mapName}`, prefixText: '0.00%'})
 for (let z = minZoom; z <= maxZoom; z++) {
   zoomSpinner.start(`${mapName} | z ${z}/${maxZoom}`)
   const scaledMap = sharp(
-    await inputImage
+    inputImage
       .clone()
       .resize({
         width: (z + 1) * 256,
@@ -69,13 +69,13 @@ for (let z = minZoom; z <= maxZoom; z++) {
       })
       .toBuffer()
   )
-  await fs.mkdir(`output/${mapName}/${z}`).catch(error => {
+  fs.mkdir(`output/${mapName}/${z}`).catch(error => {
     if (!error.code === 'EEXIST') {
       console.log(error)
     }
   })
   for (let x = 0; x <= z; x++) {
-    await fs.mkdir(`output/${mapName}/${z}/${x}`).catch(error => {
+    fs.mkdir(`output/${mapName}/${z}/${x}`).catch(error => {
       if (!error.code === 'EEXIST') {
         console.log(error)
       }
@@ -101,7 +101,7 @@ for (let z = minZoom; z <= maxZoom; z++) {
       )
     }
     if (tiles.length > 100) {
-      await Promise.all(tiles)
+      Promise.all(tiles)
       tiles.length = 0
     }
   }
