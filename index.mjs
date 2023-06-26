@@ -97,7 +97,7 @@ dotenv.config();
                 }).toFile(`output/${mapName}/${z}/${x}/${y}.png`).then(() => {
                     zoomSpinner.suffixText = `| x ${x}/${(scaledSize / tileSize) - 1} | y ${y}/${(scaledSize / tileSize) - 1}`;
                     completedTiles++;
-                    zoomSpinner.prefixText = `${(Math.round((completedTiles / totalTiles) * 10000) / 100).toFixed(2)}%`
+                    zoomSpinner.prefixText = `${(Math.round((completedTiles / totalTiles) * 10000) / 100).toFixed(2)}%`;
                 }));
                 await tileCheck();
             }
