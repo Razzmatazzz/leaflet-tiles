@@ -16,3 +16,4 @@ You can also create a `.env` file which specifies any of the following variables
 - `MAP_NAME`: The folder name in which to store generated tiles
 - `MAX_ZOOM`: The maximum zoom level for which to generate tiles (zero-indexed)
 - `MIN_ZOOM`: The minimum zoom level for which to generate tiles (zero-indexed)
+- `TILE_SIZE`: The size of tiles, defaults to 256
