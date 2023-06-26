@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Razzmatazzz/leaflet-tiles.git"
+    "url": "git+https://github.com/the-hideout/leaflet-tiles.git"
   },
   "keywords": [
     "leaflet",
@@ -19,9 +19,9 @@
   "author": "Razzmatazz",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/Razzmatazzz/leaflet-tiles/issues"
+    "url": "https://github.com/the-hideout/leaflet-tiles/issues"
   },
-  "homepage": "https://github.com/Razzmatazzz/leaflet-tiles#readme",
+  "homepage": "https://github.com/the-hideout/leaflet-tiles#readme",
   "dependencies": {
     "dotenv": "16.3.1",
     "sharp": "0.32.1",
