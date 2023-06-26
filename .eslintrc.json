@@ -1,6 +1,6 @@
 {
     "env": {
-        "commonjs": true,
+        "commonjs": false,
         "es6": true,
         "jest": true,
         "node": true
