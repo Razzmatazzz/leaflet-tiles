@@ -1,5 +1,7 @@
 # leaflet-tiles 🍂
 
+[![test](https://github.com/the-hideout/leaflet-tiles/actions/workflows/test.yml/badge.svg)](https://github.com/the-hideout/leaflet-tiles/actions/workflows/test.yml) [![lint](https://github.com/the-hideout/leaflet-tiles/actions/workflows/lint.yml/badge.svg)](https://github.com/the-hideout/leaflet-tiles/actions/workflows/lint.yml) [![codeql](https://github.com/the-hideout/leaflet-tiles/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/the-hideout/leaflet-tiles/actions/workflows/codeql-analysis.yml)
+
 Generate leaflet tiles from an input image
 
 ## Usage 💻
