@@ -61,7 +61,9 @@ const prompt = promptSync();
         }
         const rotateSpinner = ora(`Rotating image ${rotation} degrees`);
         rotateSpinner.start();
-        inputImage = sharp(await inputImage.rotate(parseInt(rotation)).toBuffer());
+        inputImage = sharp(
+            await inputImage.rotate(parseInt(rotation)).toBuffer()
+        );
         rotateSpinner.succeed();
     }
 
@@ -125,7 +127,9 @@ const prompt = promptSync();
         const resized = tileSize * Math.pow(2, tileConfig.pow);
         const resizeSpinner = ora();
         if (resized < fullSize) {
-            resizeSpinner.start(`Shrinking source image to fit ${resized}x${resized}`);
+            resizeSpinner.start(
+                `Shrinking source image to fit ${resized}x${resized}`
+            );
             inputImage = sharp(
                 await inputImage
                     .resize({
@@ -138,7 +142,9 @@ const prompt = promptSync();
                     .toBuffer()
             );
         } else {
-            resizeSpinner.start(`Padding source image to fit ${resized}x${resized}`);
+            resizeSpinner.start(
+                `Padding source image to fit ${resized}x${resized}`
+            );
             inputImage = sharp(
                 await inputImage
                     .extend({
