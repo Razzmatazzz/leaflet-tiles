@@ -54,6 +54,17 @@ const prompt = promptSync();
     let metadata = await inputImage.metadata();
     console.log(`Image size: ${metadata.width}x${metadata.height}`);
 
+    const rotation = prompt('Rotate image 90, 180, or 270 degrees? ', 0);
+    if (rotation && !isNaN(rotation)) {
+        if (![90, 180, 270].includes(parseInt(rotation))) {
+            console.log(`${rotation} is not a valid rotation`);
+        }
+        const rotateSpinner = ora(`Rotating image ${rotation} degrees`);
+        rotateSpinner.start();
+        inputImage = sharp(await inputImage.rotate(parseInt(rotation)).toBuffer());
+        rotateSpinner.succeed();
+    }
+
     let fullSize = Math.max(metadata.width, metadata.height);
 
     let tileSize = 0;
@@ -112,8 +123,9 @@ const prompt = promptSync();
 
     if (tileConfig.difference) {
         const resized = tileSize * Math.pow(2, tileConfig.pow);
+        const resizeSpinner = ora();
         if (resized < fullSize) {
-            console.log(`Shrinking source image to fit ${resized}x${resized}`);
+            resizeSpinner.start(`Shrinking source image to fit ${resized}x${resized}`);
             inputImage = sharp(
                 await inputImage
                     .resize({
@@ -126,7 +138,7 @@ const prompt = promptSync();
                     .toBuffer()
             );
         } else {
-            console.log(`Padding source image to fit ${resized}x${resized}`);
+            resizeSpinner.start(`Padding source image to fit ${resized}x${resized}`);
             inputImage = sharp(
                 await inputImage
                     .extend({
@@ -137,6 +149,7 @@ const prompt = promptSync();
                     .toBuffer()
             );
         }
+        resizeSpinner.succeed();
         fullSize = resized;
     }
 
@@ -195,7 +208,7 @@ const prompt = promptSync();
     zoomSpinner.start();
     for (let z = minZoom; z <= maxZoom; z++) {
         const scaledSize = tileSize * Math.pow(2, z);
-        zoomSpinner.suffixText = `| Resizing to ${scaledSize}`;
+        zoomSpinner.suffixText = `| z ${z}/${maxZoom} Resizing to ${scaledSize}`;
         const scaledMap = sharp(
             await inputImage
                 .clone()
