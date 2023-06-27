@@ -97,7 +97,7 @@ const prompt = promptSync();
         tileConfig.size = parseInt(newTileSize);
         tileConfig.difference = Number.MAX_SAFE_INTEGER;
         tileConfig.pow = 0;
-        for (const pow = 0; pow < 100; pow++) {
+        for (let pow = 0; pow < 100; pow++) {
             const diff = Math.abs(
                 tileConfig.size * Math.pow(2, pow) - fullSize
             );
