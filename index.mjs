@@ -54,7 +54,7 @@ const prompt = promptSync();
     let metadata = await inputImage.metadata();
     console.log(`Image size: ${metadata.width}x${metadata.height}`);
 
-    const rotation = prompt('Rotate image 90, 180, or 270 degrees? ', 0);
+    const rotation = prompt('Rotate image 90, 180, or 270 degrees (0): ', 0);
     if (rotation && !isNaN(rotation)) {
         if (![90, 180, 270].includes(parseInt(rotation))) {
             console.log(`${rotation} is not a valid rotation`);
