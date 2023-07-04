@@ -70,7 +70,7 @@ const prompt = promptSync();
     let fullSize = Math.max(metadata.width, metadata.height);
 
     let tileSize = 0;
-    const tileConfig = {difference: Number.MAX_SAFE_INTEGER};
+    let tileConfig = {difference: Number.MAX_SAFE_INTEGER};
     tileLoop: for (let i = 200; i <= 300; i++) {
         for (let pow = 0; pow < 100; pow++) {
             if (i * Math.pow(2, pow) === fullSize) {
@@ -83,15 +83,29 @@ const prompt = promptSync();
         }
     }
     if (!tileSize) {
+        const tileResize = {
+            grow: {difference: Number.MAX_SAFE_INTEGER},
+            shrink: {difference: Number.MAX_SAFE_INTEGER},
+        };
         for (let i = 200; i <= 300; i++) {
             for (let pow = 0; pow < 100; pow++) {
-                const diff = Math.abs(i * Math.pow(2, pow) - fullSize);
-                if (diff < tileConfig.difference) {
-                    tileConfig.size = i;
-                    tileConfig.pow = pow;
-                    tileConfig.difference = diff;
+                const resized = i * Math.pow(2, pow);
+                let resizeType = tileResize.grow;
+                if (resized < fullSize) {
+                    resizeType = tileResize.shrink;
+                }
+                const diff = Math.abs(resized - fullSize);
+                if (diff < resizeType.difference) {
+                    resizeType.size = i;
+                    resizeType.pow = pow;
+                    resizeType.difference = diff;
                 }
             }
+        }
+        if (tileResize.grow.difference <= tileResize.grow.size) {
+            tileConfig = tileResize.grow;
+        } else {
+            tileConfig = tileResize.grow.difference <= tileResize.shrink.difference ? tileResize.grow : tileResize.shrink;
         }
         if (tileConfig.difference < Number.MAX_SAFE_INTEGER) {
             tileSize = tileConfig.size;
