@@ -11,6 +11,8 @@ const prompt = promptSync();
 
 (async () => {
     let imagePath = process.env.IMAGE_PATH || process.argv[2];
+    const minTileSize = process.env.MIN_TILE_SIZE || 200;
+    const maxTileSize = process.env.MAX_TILE_SIZE || 300;
     if ((await fs.lstat(imagePath)).isDirectory()) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
         const files = await fs
@@ -71,7 +73,8 @@ const prompt = promptSync();
 
     let tileSize = 0;
     let tileConfig = {difference: Number.MAX_SAFE_INTEGER};
-    tileLoop: for (let i = 200; i <= 300; i++) {
+    let tileResize = false;
+    tileLoop: for (let i = minTileSize; i <= maxTileSize; i++) {
         for (let pow = 0; pow < 100; pow++) {
             if (i * Math.pow(2, pow) === fullSize) {
                 tileConfig.size = i;
@@ -83,11 +86,11 @@ const prompt = promptSync();
         }
     }
     if (!tileSize) {
-        const tileResize = {
+        tileResize = {
             grow: {difference: Number.MAX_SAFE_INTEGER},
-            shrink: {difference: Number.MAX_SAFE_INTEGER},
+            shrink: {difference: Number.MAX_SAFE_INTEGER}
         };
-        for (let i = 200; i <= 300; i++) {
+        for (let i = minTileSize; i <= maxTileSize; i++) {
             for (let pow = 0; pow < 100; pow++) {
                 const resized = i * Math.pow(2, pow);
                 let resizeType = tileResize.grow;
@@ -105,7 +108,10 @@ const prompt = promptSync();
         if (tileResize.grow.difference <= tileResize.grow.size) {
             tileConfig = tileResize.grow;
         } else {
-            tileConfig = tileResize.grow.difference <= tileResize.shrink.difference ? tileResize.grow : tileResize.shrink;
+            tileConfig =
+                tileResize.grow.difference <= tileResize.shrink.difference
+                    ? tileResize.grow
+                    : tileResize.shrink;
         }
         if (tileConfig.difference < Number.MAX_SAFE_INTEGER) {
             tileSize = tileConfig.size;
@@ -114,6 +120,27 @@ const prompt = promptSync();
                 ? 256
                 : parseInt(process.env.TILE_SIZE);
         }
+    }
+    if (tileResize) {
+        console.log(
+            `Image must be resized. Closest grow and shrink sizes for tiles ${minTileSize}-${maxTileSize}px:`
+        );
+        console.log(
+            `Grow: ${tileResize.grow.size}px tiles with ${
+                tileResize.grow.size * Math.pow(2, tileResize.grow.pow)
+            }px total size (+${
+                tileResize.grow.size * Math.pow(2, tileResize.grow.pow) -
+                fullSize
+            }px padding)`
+        );
+        console.log(
+            `Shrink: ${tileResize.shrink.size}px tiles with ${
+                tileResize.shrink.size * Math.pow(2, tileResize.shrink.pow)
+            }px total size (${
+                tileResize.shrink.size * Math.pow(2, tileResize.shrink.pow) -
+                fullSize
+            }px)`
+        );
     }
     const newTileSize = prompt(`Tile size (${tileSize}): `, tileSize);
     if (isNaN(newTileSize)) {
