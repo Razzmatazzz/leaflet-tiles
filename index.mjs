@@ -13,6 +13,7 @@ const prompt = promptSync();
     let imagePath = process.env.IMAGE_PATH || process.argv[2];
     const minTileSize = process.env.MIN_TILE_SIZE || 200;
     const maxTileSize = process.env.MAX_TILE_SIZE || 300;
+    const testOutput = Boolean(process.env.TEST_OUTPUT || false);
     if ((await fs.lstat(imagePath)).isDirectory()) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
         const files = await fs
@@ -41,7 +42,7 @@ const prompt = promptSync();
     }
     let inputImage = sharp(imagePath, {
         unlimited: true,
-        limitInputPixels: false
+        limitInputPixels: false,
     }).png();
 
     let mapName =
@@ -56,17 +57,32 @@ const prompt = promptSync();
     let metadata = await inputImage.metadata();
     console.log(`Image size: ${metadata.width}x${metadata.height}`);
 
-    const rotation = prompt('Rotate image 90, 180, or 270 degrees (0): ', 0);
+    let rotation = prompt('Rotate image 90, 180, or 270 degrees (0): ', 0);
     if (rotation && !isNaN(rotation)) {
-        if (![90, 180, 270].includes(parseInt(rotation))) {
+        rotation = parseInt(rotation);
+        if (![90, 180, 270].includes(rotation)) {
             console.log(`${rotation} is not a valid rotation`);
         }
         const rotateSpinner = ora(`Rotating image ${rotation} degrees`);
         rotateSpinner.start();
         inputImage = sharp(
-            await inputImage.rotate(parseInt(rotation)).toBuffer()
+            await inputImage.rotate(rotation).toBuffer(), 
+            {
+                unlimited: true,
+                limitInputPixels: false,
+            }
         );
+        if (testOutput) {
+            rotateSpinner.suffixText= 'saving test output...';
+            await inputImage.toFile('./output/test_rotated.jpg');
+            rotateSpinner.suffixText = '';
+        }
         rotateSpinner.succeed();
+        if (rotation === 90 || rotation === 270) {
+            const h = metadata.height;
+            metadata.height = metadata.width;
+            metadata.width = h;
+        }
     }
 
     let fullSize = Math.max(metadata.width, metadata.height);
@@ -174,8 +190,8 @@ const prompt = promptSync();
             inputImage = sharp(
                 await inputImage
                     .resize({
-                        width: fullSize,
-                        height: fullSize,
+                        width: resized,
+                        height: resized,
                         fit: sharp.fit.contain,
                         position: sharp.gravity.northwest,
                         background: {r: 1, g: 0, b: 0, alpha: 0}
@@ -190,11 +206,20 @@ const prompt = promptSync();
                 await inputImage
                     .extend({
                         right: resized - metadata.width,
-                        height: resized - metadata.height,
+                        bottom: resized - metadata.height,
                         background: {r: 1, g: 0, b: 0, alpha: 0}
                     })
-                    .toBuffer()
+                    .toBuffer(), 
+                {
+                    unlimited: true,
+                    limitInputPixels: false,
+                }
             );
+        }
+        if (testOutput) {
+            resizeSpinner.suffixText = 'saving test output...';
+            await inputImage.toFile('./output/test_resized.jpg');
+            resizeSpinner.suffixText = '';
         }
         resizeSpinner.succeed();
         fullSize = resized;
