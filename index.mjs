@@ -42,7 +42,7 @@ const prompt = promptSync();
     }
     let inputImage = sharp(imagePath, {
         unlimited: true,
-        limitInputPixels: false,
+        limitInputPixels: false
     }).png();
 
     let mapName =
@@ -65,15 +65,12 @@ const prompt = promptSync();
         }
         const rotateSpinner = ora(`Rotating image ${rotation} degrees`);
         rotateSpinner.start();
-        inputImage = sharp(
-            await inputImage.rotate(rotation).toBuffer(), 
-            {
-                unlimited: true,
-                limitInputPixels: false,
-            }
-        );
+        inputImage = sharp(await inputImage.rotate(rotation).toBuffer(), {
+            unlimited: true,
+            limitInputPixels: false
+        });
         if (testOutput) {
-            rotateSpinner.suffixText= 'saving test output...';
+            rotateSpinner.suffixText = 'saving test output...';
             await inputImage.toFile('./output/test_rotated.jpg');
             rotateSpinner.suffixText = '';
         }
@@ -209,10 +206,10 @@ const prompt = promptSync();
                         bottom: resized - metadata.height,
                         background: {r: 1, g: 0, b: 0, alpha: 0}
                     })
-                    .toBuffer(), 
+                    .toBuffer(),
                 {
                     unlimited: true,
-                    limitInputPixels: false,
+                    limitInputPixels: false
                 }
             );
         }
