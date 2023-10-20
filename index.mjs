@@ -11,8 +11,8 @@ const prompt = promptSync();
 
 (async () => {
     let imagePath = process.env.IMAGE_PATH || process.argv[2];
-    const minTileSize = process.env.MIN_TILE_SIZE || 200;
-    const maxTileSize = process.env.MAX_TILE_SIZE || 300;
+    const minTileSize = process.env.MIN_TILE_SIZE || 100;
+    const maxTileSize = process.env.MAX_TILE_SIZE || 400;
     const testOutput = Boolean(process.env.TEST_OUTPUT || false);
     if ((await fs.lstat(imagePath)).isDirectory()) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
