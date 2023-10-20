@@ -5,12 +5,17 @@ import sharp from 'sharp';
 import ora from 'ora';
 import promptSync from 'prompt-sync';
 import dotenv from 'dotenv';
+import { DateTime } from 'luxon';
 
 dotenv.config();
 const prompt = promptSync();
 
 (async () => {
     let imagePath = process.env.IMAGE_PATH || process.argv[2];
+    if (!imagePath) {
+        imagePath = '../tarkov-dev-src-maps/interactive';
+        console.log(`IMAGE_PATH not set, defaulting to ${imagePath}`);
+    }
     const minTileSize = process.env.MIN_TILE_SIZE || 100;
     const maxTileSize = process.env.MAX_TILE_SIZE || 400;
     const testOutput = Boolean(process.env.TEST_OUTPUT || false);
@@ -199,11 +204,19 @@ const prompt = promptSync();
             resizeSpinner.start(
                 `Padding source image to fit ${resized}x${resized}`
             );
+            const xPadding = resized - metadata.width;
+            const yPadding = resized - metadata.height;
+            const top = Math.ceil(yPadding / 2);
+            const bottom = Math.floor(yPadding / 2);
+            const left = Math.ceil(xPadding / 2);
+            const right = Math.floor(xPadding / 2);
             inputImage = sharp(
                 await inputImage
                     .extend({
-                        right: resized - metadata.width,
-                        bottom: resized - metadata.height,
+                        top,
+                        right,
+                        bottom,
+                        left,
                         background: {r: 1, g: 0, b: 0, alpha: 0}
                     })
                     .toBuffer(),
@@ -275,6 +288,7 @@ const prompt = promptSync();
     let completedTiles = 0;
     const zoomSpinner = ora({text: mapName, prefixText: '0.00%'});
     zoomSpinner.start();
+    const startTime = DateTime.now();
     for (let z = minZoom; z <= maxZoom; z++) {
         const scaledSize = tileSize * Math.pow(2, z);
         zoomSpinner.suffixText = `| z ${z}/${maxZoom} Resizing to ${scaledSize}`;
@@ -331,5 +345,6 @@ const prompt = promptSync();
         zoomSpinner.suffixText = '';
         zoomSpinner.prefixText = '';
     }
+    zoomSpinner.suffixText = `completed ${DateTime.now().toRelative({ base: startTime})}`;
     zoomSpinner.succeed();
 })();
