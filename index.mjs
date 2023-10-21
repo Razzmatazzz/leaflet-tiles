@@ -7,6 +7,8 @@ import promptSync from 'prompt-sync';
 import dotenv from 'dotenv';
 import { DateTime } from 'luxon';
 
+import WorkerPromise from './worker-promise.mjs';
+
 dotenv.config();
 const prompt = promptSync();
 
@@ -249,13 +251,13 @@ const prompt = promptSync();
     const minZoom = process.env.MIN_ZOOM || 0;
 
     await fs.mkdir('output').catch(error => {
-        if (!error.code === 'EEXIST') {
+        if (error.code !== 'EEXIST') {
             console.log(error);
         }
     });
 
     await fs.mkdir(`output/${mapName}`).catch(error => {
-        if (!error.code === 'EEXIST') {
+        if (error.code !== 'EEXIST') {
             console.log(error);
         }
     });
@@ -280,7 +282,7 @@ const prompt = promptSync();
 
     const tiles = [];
     const tileCheck = async () => {
-        if (tiles.length > 32) {
+        if (tiles.length > 8) {
             await Promise.all(tiles);
             tiles.length = 0;
         }
@@ -289,56 +291,41 @@ const prompt = promptSync();
     const zoomSpinner = ora({text: mapName, prefixText: '0.00%'});
     zoomSpinner.start();
     const startTime = DateTime.now();
+    const inputImageBuffer = (await inputImage.toBuffer()).buffer;
     for (let z = minZoom; z <= maxZoom; z++) {
         const scaledSize = tileSize * Math.pow(2, z);
         zoomSpinner.suffixText = `| z ${z}/${maxZoom} Resizing to ${scaledSize}`;
-        const scaledMap = sharp(
-            await inputImage
-                .clone()
-                .resize({
-                    width: scaledSize,
-                    height: scaledSize,
-                    fit: sharp.fit.contain,
-                    position: sharp.gravity.northwest,
-                    background: {r: 1, g: 0, b: 0, alpha: 0}
-                })
-                .toBuffer(),
-            {unlimited: true, limitInputPixels: false}
-        );
+        const workerResult = await new WorkerPromise('resize-worker.mjs').start({tileSize, z, image: inputImageBuffer});
         await fs.mkdir(`output/${mapName}/${z}`).catch(error => {
-            if (!error.code === 'EEXIST') {
+            if (error.code !== 'EEXIST') {
                 console.log(error);
             }
         });
         for (let x = 0; x < scaledSize / tileSize; x++) {
             await fs.mkdir(`output/${mapName}/${z}/${x}`).catch(error => {
-                if (!error.code === 'EEXIST') {
+                if (error.code !== 'EEXIST') {
                     console.log(error);
                 }
             });
             for (let y = 0; y < scaledSize / tileSize; y++) {
-                tiles.push(
-                    scaledMap
-                        .clone()
-                        .extract({
-                            left: x * tileSize,
-                            top: y * tileSize,
-                            width: tileSize,
-                            height: tileSize
-                        })
-                        .toFile(`output/${mapName}/${z}/${x}/${y}.png`)
-                        .then(() => {
-                            zoomSpinner.suffixText = `| z ${z}/${maxZoom} | x ${x}/${
-                                scaledSize / tileSize - 1
-                            } | y ${y}/${scaledSize / tileSize - 1}`;
-                            completedTiles++;
-                            zoomSpinner.prefixText = `${(
-                                Math.round(
-                                    (completedTiles / totalTiles) * 10000
-                                ) / 100
-                            ).toFixed(2)}%`;
-                        })
-                );
+                tiles.push(new WorkerPromise('tile-worker.mjs').start({
+                    mapName,
+                    tileSize,
+                    x,
+                    y,
+                    z,
+                    image: workerResult.image,
+                }).then(() => {
+                    zoomSpinner.suffixText = `| z ${z}/${maxZoom} | x ${x}/${
+                        scaledSize / tileSize - 1
+                    } | y ${y}/${scaledSize / tileSize - 1}`;
+                    completedTiles++;
+                    zoomSpinner.prefixText = `${(
+                        Math.round(
+                            (completedTiles / totalTiles) * 10000
+                        ) / 100
+                    ).toFixed(2)}%`;
+                }));
                 await tileCheck();
             }
         }
