@@ -7,7 +7,7 @@ import promptSync from 'prompt-sync';
 import dotenv from 'dotenv';
 import { DateTime } from 'luxon';
 
-import WorkerPromise from './worker-promise.mjs';
+import WorkerPromise, { activeWorkerCount, workerEvents } from './worker-promise.mjs';
 
 dotenv.config();
 const prompt = promptSync();
@@ -20,6 +20,7 @@ const prompt = promptSync();
     }
     const minTileSize = process.env.MIN_TILE_SIZE || 100;
     const maxTileSize = process.env.MAX_TILE_SIZE || 400;
+    const threadLimit = isNaN(process.env.THREAD_LIMIT) ? 8 : parseInt(process.env.THREAD_LIMIT);
     const testOutput = Boolean(process.env.TEST_OUTPUT || false);
     if ((await fs.lstat(imagePath)).isDirectory()) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
@@ -101,7 +102,9 @@ const prompt = promptSync();
                 tileConfig.pow = pow;
                 tileConfig.difference = 0;
                 tileSize = i;
-                break tileLoop;
+                if (i > 200) {
+                    break tileLoop;
+                }
             }
         }
     }
@@ -280,12 +283,15 @@ const prompt = promptSync();
         totalTiles += Math.pow((tileSize * Math.pow(2, z)) / tileSize, 2);
     }
 
-    const tiles = [];
     const tileCheck = async () => {
-        if (tiles.length > 8) {
-            await Promise.all(tiles);
-            tiles.length = 0;
+        if (activeWorkerCount() >= threadLimit) {
+            return new Promise(resolve => {
+                workerEvents.once('workerEnded', () => {
+                    resolve();
+                });
+            });
         }
+        return Promise.resolve();
     };
     let completedTiles = 0;
     const zoomSpinner = ora({text: mapName, prefixText: '0.00%'});
@@ -308,7 +314,7 @@ const prompt = promptSync();
                 }
             });
             for (let y = 0; y < scaledSize / tileSize; y++) {
-                tiles.push(new WorkerPromise('tile-worker.mjs').start({
+                new WorkerPromise('tile-worker.mjs').start({
                     mapName,
                     tileSize,
                     x,
@@ -325,7 +331,7 @@ const prompt = promptSync();
                             (completedTiles / totalTiles) * 10000
                         ) / 100
                     ).toFixed(2)}%`;
-                }));
+                });
                 await tileCheck();
             }
         }

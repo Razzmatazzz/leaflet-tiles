@@ -11,18 +11,17 @@ parentPort.once('message', async (options) => {
     const inputImage = sharp(options.image, {unlimited: true, limitInputPixels: false});
     const metadata = await inputImage.metadata();
     
-    const scaledSize = tileSize * Math.pow(2, z);
-    
     const filePath = `output/${mapName}/${z}/${x}/${y}.png`;
-    
-    if (scaledSize !== metadata.width || scaledSize !== metadata.height) {
-        await inputImage.extract({
+    if (tileSize !== metadata.width || tileSize !== metadata.height) {
+        inputImage.extract({
             left: x * tileSize,
             top: y * tileSize,
             width: tileSize,
             height: tileSize
-        }).toFile(filePath);
+        });
     }
+    await inputImage.toFile(filePath);
     
     parentPort.postMessage({message: 'complete'});
+    process.exit();
 });

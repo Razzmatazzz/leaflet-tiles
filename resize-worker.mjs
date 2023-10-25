@@ -23,4 +23,5 @@ parentPort.once('message', async (options) => {
     const imageBuffer = await inputImage.toBuffer();
     
     parentPort.postMessage({message: 'complete', image: imageBuffer.buffer});
+    process.exit();
 });
