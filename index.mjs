@@ -12,16 +12,21 @@ import WorkerPromise, { activeWorkerCount, workerEvents } from './worker-promise
 dotenv.config();
 const prompt = promptSync();
 
-(async () => {
-    let imagePath = process.env.IMAGE_PATH || process.argv[2];
-    if (!imagePath) {
-        imagePath = '../tarkov-dev-src-maps/interactive';
-        console.log(`IMAGE_PATH not set, defaulting to ${imagePath}`);
-    }
-    const minTileSize = process.env.MIN_TILE_SIZE || 100;
-    const maxTileSize = process.env.MAX_TILE_SIZE || 400;
-    const threadLimit = isNaN(process.env.THREAD_LIMIT) ? 8 : parseInt(process.env.THREAD_LIMIT);
-    const testOutput = Boolean(process.env.TEST_OUTPUT || false);
+let imagePath = process.env.IMAGE_PATH || process.argv[2];
+if (!imagePath) {
+    imagePath = '../tarkov-dev-src-maps/interactive';
+    console.log(`IMAGE_PATH not set, defaulting to ${imagePath}`);
+}
+const minTileSize = process.env.MIN_TILE_SIZE || 100;
+const maxTileSize = process.env.MAX_TILE_SIZE || 400;
+const threadLimit = isNaN(process.env.THREAD_LIMIT) ? 8 : parseInt(process.env.THREAD_LIMIT);
+const testOutput = Boolean(process.env.TEST_OUTPUT || false);
+
+async function getTileSettings() {
+    const tileSettings = {
+        imagePath,
+    };
+
     if ((await fs.lstat(imagePath)).isDirectory()) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
         const files = await fs
@@ -34,8 +39,7 @@ const prompt = promptSync();
                 )
             );
         if (files.length < 1) {
-            console.log(`The folder ${imagePath} does not contain any images`);
-            return;
+            return Promise.reject(new Error(`The folder ${imagePath} does not contain any images`));
         }
         console.log('Select input image:');
         for (let i = 0; i < files.length; i++) {
@@ -43,51 +47,34 @@ const prompt = promptSync();
         }
         const index = prompt(`[1-${files.length}]: `);
         if (isNaN(index) || index < 1 || index > files.length) {
-            console.log(`${index} is an invalid selection`);
-            return;
+            return Promise.reject(new Error(`${index} is an invalid input image selection`));
         }
-        imagePath = path.join(imagePath, files[parseInt(index - 1)]);
+        tileSettings.imagePath = path.join(imagePath, files[parseInt(index - 1)]);
     }
-    let inputImage = sharp(imagePath, {
+
+    tileSettings.mapName =
+        process.env.MAP_NAME ||
+        tileSettings.imagePath.substring(
+            tileSettings.imagePath.lastIndexOf(path.sep) + 1,
+            tileSettings.imagePath.lastIndexOf('.')
+        );
+    const newMapName = prompt(`Output folder (${tileSettings.mapName}): `, tileSettings.mapName);
+    tileSettings.mapName = newMapName.replace(' ', '_');
+
+    let inputImage = sharp(tileSettings.imagePath, {
         unlimited: true,
         limitInputPixels: false
     }).png();
-
-    let mapName =
-        process.env.MAP_NAME ||
-        imagePath.substring(
-            imagePath.lastIndexOf(path.sep) + 1,
-            imagePath.lastIndexOf('.')
-        );
-    const newMapName = prompt(`Output folder (${mapName}): `, mapName);
-    mapName = newMapName.replace(' ', '_');
-
+    
     let metadata = await inputImage.metadata();
     console.log(`Image size: ${metadata.width}x${metadata.height}`);
 
-    let rotation = prompt('Rotate image 90, 180, or 270 degrees (0): ', 0);
-    if (rotation && !isNaN(rotation)) {
-        rotation = parseInt(rotation);
-        if (![90, 180, 270].includes(rotation)) {
-            console.log(`${rotation} is not a valid rotation`);
+    tileSettings.rotation = prompt('Rotate image 90, 180, or 270 degrees (0): ', 0).trim();
+    if (tileSettings.rotation) {
+        if (!['0', '90', '180', '270'].includes(tileSettings.rotation)) {
+            return Promise.reject(new Error(`${tileSettings.rotation} is not a valid rotation`));
         }
-        const rotateSpinner = ora(`Rotating image ${rotation} degrees`);
-        rotateSpinner.start();
-        inputImage = sharp(await inputImage.rotate(rotation).toBuffer(), {
-            unlimited: true,
-            limitInputPixels: false
-        });
-        if (testOutput) {
-            rotateSpinner.suffixText = 'saving test output...';
-            await inputImage.toFile('./output/test_rotated.jpg');
-            rotateSpinner.suffixText = '';
-        }
-        rotateSpinner.succeed();
-        if (rotation === 90 || rotation === 270) {
-            const h = metadata.height;
-            metadata.height = metadata.width;
-            metadata.width = h;
-        }
+        tileSettings.rotation = parseInt(tileSettings.rotation);
     }
 
     let fullSize = Math.max(metadata.width, metadata.height);
@@ -167,8 +154,7 @@ const prompt = promptSync();
     }
     const newTileSize = prompt(`Tile size (${tileSize}): `, tileSize);
     if (isNaN(newTileSize)) {
-        console.log(`${newTileSize} is not a valid tile size`);
-        return;
+        return Promise.reject(new Error(`${newTileSize} is not a valid tile size`));
     }
     if (parseInt(newTileSize) !== tileConfig.size) {
         tileConfig.size = parseInt(newTileSize);
@@ -185,20 +171,78 @@ const prompt = promptSync();
         }
     }
 
-    tileSize = tileConfig.size;
+    tileSettings.tileSize = tileConfig.size;
 
     if (tileConfig.difference) {
-        const resized = tileSize * Math.pow(2, tileConfig.pow);
+        tileSettings.resize = tileSize * Math.pow(2, tileConfig.pow);
+    }
+
+    let zoomLevels = 0;
+    for (let imageWidth = fullSize; imageWidth >= tileSize; imageWidth /= 2) {
+        zoomLevels++;
+    }
+
+    tileSettings.maxZoom = Math.min(
+        isNaN(process.env.MAX_ZOOM)
+            ? zoomLevels
+            : parseInt(process.env.MAX_ZOOM),
+        zoomLevels - 1
+    );
+    tileSettings.minZoom = process.env.MIN_ZOOM || 0;
+
+    return tileSettings;
+}
+
+async function createTiles(options) {
+    const {
+        imagePath,
+        rotation,
+        resize,
+        tileSize,
+        minZoom,
+        maxZoom,
+        mapName,
+    } = options;
+    let inputImage = sharp(imagePath, {
+        unlimited: true,
+        limitInputPixels: false
+    }).png();
+
+    let metadata = await inputImage.metadata();
+
+    if (rotation) {
+        const rotateSpinner = ora(`Rotating image ${rotation} degrees`);
+        rotateSpinner.start();
+        inputImage = sharp(await inputImage.rotate(rotation).toBuffer(), {
+            unlimited: true,
+            limitInputPixels: false
+        });
+        if (testOutput) {
+            rotateSpinner.suffixText = 'saving test output...';
+            await inputImage.toFile('./output/test_rotated.jpg');
+            rotateSpinner.suffixText = '';
+        }
+        rotateSpinner.succeed();
+        if (rotation === 90 || rotation === 270) {
+            const h = metadata.height;
+            metadata.height = metadata.width;
+            metadata.width = h;
+        }
+    }
+
+    let fullSize = Math.max(metadata.width, metadata.height);
+
+    if (resize) {
         const resizeSpinner = ora();
-        if (resized < fullSize) {
+        if (resize < fullSize) {
             resizeSpinner.start(
-                `Shrinking source image to fit ${resized}x${resized}`
+                `Shrinking source image to fit ${resize}x${resize}`
             );
             inputImage = sharp(
                 await inputImage
                     .resize({
-                        width: resized,
-                        height: resized,
+                        width: resize,
+                        height: resize,
                         fit: sharp.fit.contain,
                         position: sharp.gravity.northwest,
                         background: {r: 1, g: 0, b: 0, alpha: 0}
@@ -207,10 +251,10 @@ const prompt = promptSync();
             );
         } else {
             resizeSpinner.start(
-                `Padding source image to fit ${resized}x${resized}`
+                `Padding source image to fit ${resize}x${resize}`
             );
-            const xPadding = resized - metadata.width;
-            const yPadding = resized - metadata.height;
+            const xPadding = resize - metadata.width;
+            const yPadding = resize - metadata.height;
             const top = Math.ceil(yPadding / 2);
             const bottom = Math.floor(yPadding / 2);
             const left = Math.ceil(xPadding / 2);
@@ -237,27 +281,8 @@ const prompt = promptSync();
             resizeSpinner.suffixText = '';
         }
         resizeSpinner.succeed();
-        fullSize = resized;
+        fullSize = resize;
     }
-
-    let zoomLevels = 0;
-    for (let imageWidth = fullSize; imageWidth >= tileSize; imageWidth /= 2) {
-        zoomLevels++;
-    }
-
-    const maxZoom = Math.min(
-        isNaN(process.env.MAX_ZOOM)
-            ? zoomLevels
-            : parseInt(process.env.MAX_ZOOM),
-        zoomLevels - 1
-    );
-    const minZoom = process.env.MIN_ZOOM || 0;
-
-    await fs.mkdir('output').catch(error => {
-        if (error.code !== 'EEXIST') {
-            console.log(error);
-        }
-    });
 
     await fs.mkdir(`output/${mapName}`).catch(error => {
         if (error.code !== 'EEXIST') {
@@ -340,4 +365,37 @@ const prompt = promptSync();
     }
     zoomSpinner.suffixText = `completed ${DateTime.now().toRelative({ base: startTime})}`;
     zoomSpinner.succeed();
+}
+
+(async () => {
+    await fs.mkdir('output').catch(error => {
+        if (error.code !== 'EEXIST') {
+            console.log(error);
+        }
+    });
+
+    const tileSettings = [];
+    while (true) {
+        try {
+            tileSettings.push(await getTileSettings());
+        } catch (error) {
+            console.log(error.message);
+        }
+        if (tileSettings.length > 0) {
+            console.log(`Queued tiles: ${tileSettings.map(setting => setting.mapName).join(', ')}`);
+        }
+        const again = prompt(`Do you want to queue another tileset? (n): `, 'n').trim().toLocaleLowerCase();
+        if (!again.startsWith('y')) {
+            break;
+        }
+    }
+    
+    for (const settings of tileSettings) {
+        try {
+            await createTiles(settings);
+        } catch (error) {
+            console.log(`Error creating ${settings.mapName} tiles`);
+            console.log(error);
+        }
+    }
 })();

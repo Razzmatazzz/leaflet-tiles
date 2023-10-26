@@ -15,7 +15,7 @@ parentPort.once('message', async (options) => {
             width: scaledSize,
             height: scaledSize,
             fit: sharp.fit.contain,
-            position: sharp.gravity.northwest,
+            //position: sharp.gravity.northwest,
             background: {r: 1, g: 0, b: 0, alpha: 0}
         });
     }
