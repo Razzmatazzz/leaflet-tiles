@@ -311,9 +311,7 @@ async function createTiles(options) {
     const tileCheck = async () => {
         if (activeWorkerCount() >= threadLimit) {
             return new Promise(resolve => {
-                workerEvents.once('workerEnded', () => {
-                    resolve();
-                });
+                workerEvents.once('workerEnded', resolve);
             });
         }
         return Promise.resolve();
